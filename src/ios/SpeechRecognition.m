@@ -199,6 +199,11 @@
 
 -(void) stopOrAbort
 {
+    NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+    [event setValue:@"stop" forKey:@"type"];
+    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+    [self.pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
     if (NSClassFromString(@"SFSpeechRecognizer")) {
         if (self.audioEngine.isRunning) {
             [self.audioEngine stop];
@@ -211,6 +216,12 @@
 
 -(void) stopAndRelease
 {
+    NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+    [event setValue:@"stop" forKey:@"type"];
+    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+    [self.pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+    
     [self.audioEngine stop];
     [self.audioEngine.inputNode removeTapOnBus:0];
     self.recognitionRequest = nil;
