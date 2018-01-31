@@ -200,7 +200,7 @@
 -(void) stopOrAbort
 {
     NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-    [event setValue:@"stop" forKey:@"type"];
+    [event setValue:@"end" forKey:@"type"];
     self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
     [self.pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
@@ -217,7 +217,7 @@
 -(void) stopAndRelease
 {
     NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-    [event setValue:@"stop" forKey:@"type"];
+    [event setValue:@"end" forKey:@"type"];
     self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
     [self.pluginResult setKeepCallbackAsBool:YES];
     [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
