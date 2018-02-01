@@ -204,34 +204,44 @@
 
 -(void) stopOrAbort
 {
-    if (NSClassFromString(@"SFSpeechRecognizer")) {
-        if (self.audioEngine.isRunning) {
-            NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-            [event setValue:@"end" forKey:@"type"];
-            self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
-            [self.pluginResult setKeepCallbackAsBool:YES];
-            [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+    @try {
+        if (NSClassFromString(@"SFSpeechRecognizer")) {
+            if (self.audioEngine.isRunning) {
+                NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+                [event setValue:@"end" forKey:@"type"];
+                self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+                [self.pluginResult setKeepCallbackAsBool:YES];
+                [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
 
-            [self.audioEngine stop];
-            [self.recognitionRequest endAudio];
+                [self.audioEngine stop];
+                [self.recognitionRequest endAudio];
+            }
+        } else {
+            [self.iSpeechRecognition cancel];
         }
-    } else {
-        [self.iSpeechRecognition cancel];
     }
+    @catch (NSException *exception) {
+        [self sendErrorWithMessage:exception.reason andCode:123];
+    }    
 }
 
 -(void) stopAndRelease
 {
-    NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-    [event setValue:@"end" forKey:@"type"];
-    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
-    [self.pluginResult setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
-    
-    [self.audioEngine stop];
-    [self.audioEngine.inputNode removeTapOnBus:0];
-    self.recognitionRequest = nil;
-    self.recognitionTask = nil;
+    @try {
+        NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+        [event setValue:@"end" forKey:@"type"];
+        self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+        [self.pluginResult setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+
+        [self.audioEngine stop];
+        [self.audioEngine.inputNode removeTapOnBus:0];
+        self.recognitionRequest = nil;
+        self.recognitionTask = nil;
+    }
+    @catch (NSException *exception) {
+        [self sendErrorWithMessage:exception.reason andCode:123];
+    }
 }
 
 @end
