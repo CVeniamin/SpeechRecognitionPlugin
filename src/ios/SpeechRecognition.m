@@ -23,13 +23,18 @@
 
 - (void) start:(CDVInvokedUrlCommand*)command
 {
-    self.command = command;
-    NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-    [event setValue:@"start" forKey:@"type"];
-    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
-    [self.pluginResult setKeepCallbackAsBool:YES];
-    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
-    [self recognize];
+    @try {
+        self.command = command;
+        NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+        [event setValue:@"start" forKey:@"type"];
+        self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+        [self.pluginResult setKeepCallbackAsBool:YES];
+        [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+        [self recognize];
+    }
+    @catch (NSException *exception) {
+        [self sendErrorWithMessage:exception.reason andCode:123];
+    }
 
 }
 
