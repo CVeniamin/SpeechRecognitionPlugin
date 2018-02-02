@@ -125,7 +125,8 @@
         }];
 
         //AVAudioFormat *recordingFormat = [self.audioEngine.inputNode outputFormatForBus:0];
-        AVAudioFormat *recordingFormat = [[AVAudioFormat alloc]initWithCommonFormat:AVAudioPCMFormatInt16 sampleRate:44100.0 channels:1 interleaved:0];
+        AVAudioFormat *recordingFormat = [self.audioEngine.inputNode inputFormatForBus:0];
+        //AVAudioFormat *recordingFormat = [[AVAudioFormat alloc]initWithCommonFormat:AVAudioPCMFormatInt16 sampleRate:44100.0 channels:1 interleaved:0];
         [self.audioEngine.inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             [self.recognitionRequest appendAudioPCMBuffer:buffer];
         }],
