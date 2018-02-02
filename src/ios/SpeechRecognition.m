@@ -221,7 +221,7 @@
         }
     }
     @catch (NSException *exception) {
-        [self sendErrorWithMessage:exception.reason andCode:123];
+        [self sendErrorWithMessage:exception.reason andCode:124];
     }    
 }
 
@@ -240,7 +240,7 @@
         self.recognitionTask = nil;
     }
     @catch (NSException *exception) {
-        [self sendErrorWithMessage:exception.reason andCode:123];
+        [self sendErrorWithMessage:exception.reason andCode:125];
     }
 }
 
