@@ -124,8 +124,8 @@
             }
         }];
 
-        AVAudioFormat *recordingFormat = [self.audioEngine.inputNode outputFormatForBus:0];
-
+        //AVAudioFormat *recordingFormat = [self.audioEngine.inputNode outputFormatForBus:0];
+        AVAudioFormat *recordingFormat = [[AVAudioFormat alloc]initWithCommonFormat:AVAudioPCMFormatInt16 sampleRate:44100.0 channels:1 interleaved:0];
         [self.audioEngine.inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             [self.recognitionRequest appendAudioPCMBuffer:buffer];
         }],
@@ -140,7 +140,7 @@
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     //[audioSession setCategory:AVAudioSessionCategoryRecord error:nil];
     //[audioSession setMode:AVAudioSessionModeMeasurement error:nil];
-    [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error:nil];
+    [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:(AVAudioSessionCategoryOptionMixWithOthers | AVAudioSessionCategoryOptionDefaultToSpeaker) error:nil];
     [audioSession setMode:AVAudioSessionModeDefault error:nil];
     [audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
 }
