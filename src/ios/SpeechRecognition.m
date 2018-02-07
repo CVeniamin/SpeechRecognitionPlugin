@@ -25,11 +25,6 @@
 {
     @try {
         self.command = command;
-        NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-        [event setValue:@"start" forKey:@"type"];
-        self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
-        [self.pluginResult setKeepCallbackAsBool:YES];
-        [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
         [self recognize];
     }
     @catch (NSException *exception) {
@@ -75,6 +70,12 @@
 
 - (void) recordAndRecognizeWithLang:(NSString *) lang
 {
+    NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+    [event setValue:@"start" forKey:@"type"];
+    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+    [self.pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+    
     NSLocale *locale = [[NSLocale alloc] initWithLocaleIdentifier:lang];
     self.sfSpeechRecognizer = [[SFSpeechRecognizer alloc] initWithLocale:locale];
     if (!self.sfSpeechRecognizer) {
