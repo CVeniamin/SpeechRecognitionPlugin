@@ -139,7 +139,7 @@
 
 - (void) initAudioSession
 {
-    [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
+    //[[UIApplication sharedApplication] endReceivingRemoteControlEvents];
     AVAudioSession *audioSession = [AVAudioSession sharedInstance];
     //[audioSession setCategory:AVAudioSessionCategoryRecord error:nil];
     //[audioSession setMode:AVAudioSessionModeMeasurement error:nil];
