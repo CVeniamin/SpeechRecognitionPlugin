@@ -178,8 +178,8 @@
 {
     if(!self.audioSession) {
         self.audioSession = [AVAudioSession sharedInstance];
-        [self.audioSession setMode:AVAudioSessionModeMeasurement error:nil];
-        [self.audioSession setCategory:self.sessionCategory withOptions: AVAudioSessionCategoryOptionDefaultToSpeaker error:nil];
+        [self.audioSession setMode:AVAudioSessionModeDefault error:nil];
+        [self.audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker error:nil];
         [self.audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
     }
 }
