@@ -89,11 +89,11 @@
         <framework src="CFNetwork.framework" />
         <framework src="Speech.framework" weak="true" />
         <resource-file src="src/ios/iSpeechSDK.bundle" />
-        <preference name="MICROPHONE_USAGE_DESCRIPTION" default=" " />
+        <preference name="MICROPHONE_USAGE_DESCRIPTION" default="We'll use the microphone to record your voice while chatting with friends" />
         <config-file target="*-Info.plist" parent="NSMicrophoneUsageDescription">
             <string>$MICROPHONE_USAGE_DESCRIPTION</string>
         </config-file>
-        <preference name="SPEECH_RECOGNITION_USAGE_DESCRIPTION" default=" " />
+        <preference name="SPEECH_RECOGNITION_USAGE_DESCRIPTION" default="We'll use Speech Recognition to activate SAMI voice" />
         <config-file target="*-Info.plist" parent="NSSpeechRecognitionUsageDescription">
             <string>$SPEECH_RECOGNITION_USAGE_DESCRIPTION</string>
         </config-file>

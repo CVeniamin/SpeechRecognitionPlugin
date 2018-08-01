@@ -93,6 +93,12 @@
 
 - (void) recordAndRecognizeWithLang:(NSString *) lang
 {
+    NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+    [event setValue:@"start" forKey:@"type"];
+    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+    [self.pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+    
     NSLocale *locale = [[NSLocale alloc] initWithLocaleIdentifier:lang];
     self.sfSpeechRecognizer = [[SFSpeechRecognizer alloc] initWithLocale:locale];
     if (!self.sfSpeechRecognizer) {
@@ -154,8 +160,9 @@
             }
         }];
 
-        AVAudioFormat *recordingFormat = [self.audioEngine.inputNode outputFormatForBus:0];
-
+        //AVAudioFormat *recordingFormat = [self.audioEngine.inputNode outputFormatForBus:0];
+        AVAudioFormat *recordingFormat = [self.audioEngine.inputNode inputFormatForBus:0];
+        //AVAudioFormat *recordingFormat = [[AVAudioFormat alloc]initWithCommonFormat:AVAudioPCMFormatInt16 sampleRate:44100.0 channels:1 interleaved:0];
         [self.audioEngine.inputNode installTapOnBus:0 bufferSize:1024 format:recordingFormat block:^(AVAudioPCMBuffer * _Nonnull buffer, AVAudioTime * _Nonnull when) {
             [self.recognitionRequest appendAudioPCMBuffer:buffer];
         }],
@@ -172,7 +179,7 @@
     if(!self.audioSession) {
         self.audioSession = [AVAudioSession sharedInstance];
         [self.audioSession setMode:AVAudioSessionModeMeasurement error:nil];
-        [self.audioSession setCategory:self.sessionCategory error:nil];
+        [self.audioSession setCategory:self.sessionCategory withOptions: AVAudioSessionCategoryOptionDefaultToSpeaker error:nil];
         [self.audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
     }
 }
@@ -249,18 +256,21 @@
 
 -(void) stopOrAbort
 {
-    if (NSClassFromString(@"SFSpeechRecognizer")) {
-        if (self.audioEngine.isRunning) {
-            [self.audioEngine stop];
-            [self sendEvent:(NSString *)@"audioend"];
+  if (NSClassFromString(@"SFSpeechRecognizer")) {
+      if (self.audioEngine.isRunning) {
+          [self.audioEngine stop];
+          [self sendEvent:(NSString *)@"audioend"];
 
-            [self.recognitionRequest endAudio];
-        }
-    } else if(self.iSpeechRecognition) {
-        [self.iSpeechRecognition cancel];
-    } else {
-        [self sendErrorWithMessage:@"No speech recognizer service available." andCode:4];
-    }
+          [self.recognitionRequest endAudio];
+      }
+  } else if(self.iSpeechRecognition) {
+      [self.iSpeechRecognition cancel];
+  } else {
+      [self sendErrorWithMessage:@"No speech recognizer service available." andCode:4];
+  }
+  @catch (NSException *exception) {
+      [self sendErrorWithMessage:exception.reason andCode:124];
+  }
 }
 
 -(void) stopAndRelease
