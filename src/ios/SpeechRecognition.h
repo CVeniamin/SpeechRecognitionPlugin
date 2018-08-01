@@ -1,5 +1,5 @@
 #import <Cordova/CDV.h>
-#import "ISpeechSDK.h"
+#import "iSpeechSDK.h"
 #import <Speech/Speech.h>
 
 @interface SpeechRecognition : CDVPlugin <ISSpeechRecognitionDelegate>
@@ -9,8 +9,12 @@
 @property (nonatomic, strong) ISSpeechRecognition* iSpeechRecognition;
 @property (nonatomic, strong) SFSpeechRecognizer *sfSpeechRecognizer;
 @property (nonatomic, strong) AVAudioEngine *audioEngine;
+@property (nonatomic, strong) AVAudioSession *audioSession;
 @property (nonatomic, strong) SFSpeechAudioBufferRecognitionRequest *recognitionRequest;
 @property (nonatomic, strong) SFSpeechRecognitionTask *recognitionTask;
+
+@property (assign) NSString *sessionCategory;
+@property (assign) BOOL speechStartSent;
 
 - (void) init:(CDVInvokedUrlCommand*)command;
 - (void) start:(CDVInvokedUrlCommand*)command;
