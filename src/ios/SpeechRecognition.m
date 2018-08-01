@@ -268,9 +268,6 @@
   } else {
       [self sendErrorWithMessage:@"No speech recognizer service available." andCode:4];
   }
-  @catch (NSException *exception) {
-      [self sendErrorWithMessage:exception.reason andCode:124];
-  }
 }
 
 -(void) stopAndRelease
