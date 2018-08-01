@@ -4,33 +4,56 @@
 //
 
 #import "SpeechRecognition.h"
-#import "ISpeechSDK.h"
+#import "iSpeechSDK.h"
 #import <Speech/Speech.h>
 
 @implementation SpeechRecognition
 
 - (void) init:(CDVInvokedUrlCommand*)command
 {
-    NSString * key = [self.commandDelegate.settings objectForKey:[@"apiKey" lowercaseString]];
+    NSString * key = [self.commandDelegate.settings objectForKey:[@"speechRecognitionApiKey" lowercaseString]];
     if (!key) {
-        key = @"developerdemokeydeveloperdemokey";
+        // If the new prefixed preference is not available, fall back to the original
+        // preference name for backwards compatibility.
+        key = [self.commandDelegate.settings objectForKey:[@"apiKey" lowercaseString]];
+        if (!key) {
+            key = @"developerdemokeydeveloperdemokey";
+        }
     }
-    iSpeechSDK *sdk = [iSpeechSDK sharedSDK];
-    sdk.APIKey = key;
-    self.iSpeechRecognition = [[ISSpeechRecognition alloc] init];
+
+    if([key caseInsensitiveCompare:@"disable"] == NSOrderedSame) {
+        // If the API key is set to "disable", then don't allow use of the iSpeech service.
+        self.iSpeechRecognition = Nil;
+    } else {
+        iSpeechSDK *sdk = [iSpeechSDK sharedSDK];
+        sdk.APIKey = key;
+        self.iSpeechRecognition = [[ISSpeechRecognition alloc] init];
+    }
+
+    NSString * output = [self.commandDelegate.settings objectForKey:[@"speechRecognitionAllowAudioOutput" lowercaseString]];
+    if(output && [output caseInsensitiveCompare:@"true"] == NSOrderedSame) {
+        // If the allow audio output preference is set, the need to change the session category.
+        // This allows for speech recognition and speech synthesis to be used in the same app.
+        self.sessionCategory = AVAudioSessionCategoryPlayAndRecord;
+    } else {
+        // Maintain the original functionality for backwards compatibility.
+        self.sessionCategory = AVAudioSessionCategoryRecord;
+    }
+
+    self.audioSession = Nil;
     self.audioEngine = [[AVAudioEngine alloc] init];
 }
 
 - (void) start:(CDVInvokedUrlCommand*)command
 {
-    @try {
-        self.command = command;
-        [self recognize];
-    }
-    @catch (NSException *exception) {
-        [self sendErrorWithMessage:exception.reason andCode:123];
+    if (!NSClassFromString(@"SFSpeechRecognizer") && !self.iSpeechRecognition) {
+        [self sendErrorWithMessage:@"No speech recognizer service available." andCode:4];
+        return;
     }
 
+    self.command = command;
+    [self sendEvent:(NSString *)@"start"];
+    [self recognize];
 }
 
 - (void) recognize
@@ -57,7 +80,7 @@
         } else {
             [self recordAndRecognizeWithLang:lang];
         }
-    } else {
+    } else if(self.iSpeechRecognition) {
         [self.iSpeechRecognition setDelegate:self];
         [self.iSpeechRecognition setLocale:lang];
         [self.iSpeechRecognition setFreeformType:ISFreeFormTypeDictation];
@@ -93,12 +116,19 @@
         self.recognitionRequest = [[SFSpeechAudioBufferRecognitionRequest alloc] init];
         self.recognitionRequest.shouldReportPartialResults = [[self.command argumentAtIndex:1] boolValue];
 
+        self.speechStartSent = FALSE;
+
         self.recognitionTask = [self.sfSpeechRecognizer recognitionTaskWithRequest:self.recognitionRequest resultHandler:^(SFSpeechRecognitionResult *result, NSError *error) {
 
             if (error) {
                 NSLog(@"error");
                 [self stopAndRelease];
                 [self sendErrorWithMessage:error.localizedFailureReason andCode:error.code];
+            }
+
+            if(!self.speechStartSent) {
+                [self sendEvent:(NSString *)@"speechstart"];
+                self.speechStartSent = TRUE;
             }
 
             if (result) {
@@ -108,7 +138,7 @@
                     if (alternatives.count < maxAlternatives) {
                         float confMed = 0;
                         for ( SFTranscriptionSegment *transcriptionSegment in transcription.segments ) {
-                            NSLog(@"transcriptionSegment.confidence %f", transcriptionSegment.confidence);
+                            //NSLog(@"transcriptionSegment.confidence %f", transcriptionSegment.confidence);
                             confMed +=transcriptionSegment.confidence;
                         }
                         NSMutableDictionary * resultDict = [[NSMutableDictionary alloc]init];
@@ -120,6 +150,11 @@
                 }
                 [self sendResults:@[alternatives]];
                 if ( result.isFinal ) {
+                    if(self.speechStartSent) {
+                        [self sendEvent:(NSString *)@"speechend"];
+                        self.speechStartSent = FALSE;
+                    }
+
                     [self stopAndRelease];
                 }
             }
@@ -134,18 +169,19 @@
 
         [self.audioEngine prepare];
         [self.audioEngine startAndReturnError:nil];
+
+        [self sendEvent:(NSString *)@"audiostart"];
     }
 }
 
 - (void) initAudioSession
 {
-    //[[UIApplication sharedApplication] endReceivingRemoteControlEvents];
-    AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-    //[audioSession setCategory:AVAudioSessionCategoryRecord error:nil];
-    //[audioSession setMode:AVAudioSessionModeMeasurement error:nil];
-    [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord withOptions: AVAudioSessionCategoryOptionDefaultToSpeaker error:nil];
-    [audioSession setMode:AVAudioSessionModeDefault error:nil];
-    [audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
+    if(!self.audioSession) {
+        self.audioSession = [AVAudioSession sharedInstance];
+        [self.audioSession setMode:AVAudioSessionModeMeasurement error:nil];
+        [self.audioSession setCategory:self.sessionCategory withOptions: AVAudioSessionCategoryOptionDefaultToSpeaker error:nil];
+        [self.audioSession setActive:YES withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
+    }
 }
 
 - (BOOL) permissionIsSet
@@ -156,14 +192,15 @@
 
 - (void)recognition:(ISSpeechRecognition *)speechRecognition didGetRecognitionResult:(ISSpeechRecognitionResult *)result
 {
-    NSMutableDictionary * resultDict = [[NSMutableDictionary alloc]init];
-    [resultDict setValue:result.text forKey:@"transcript"];
-    [resultDict setValue:[NSNumber numberWithBool:YES] forKey:@"final"];
-    [resultDict setValue:[NSNumber numberWithFloat:result.confidence]forKey:@"confidence"];
-    NSArray * alternatives = @[resultDict];
+    NSMutableDictionary * alternativeDict = [[NSMutableDictionary alloc]init];
+    [alternativeDict setValue:result.text forKey:@"transcript"];
+    // The spec has the final attribute as part of the result and not per alternative.
+    // For backwards compatibility, we leave it here and let the Javascript add it to the result list.
+    [alternativeDict setValue:[NSNumber numberWithBool:YES] forKey:@"final"];
+    [alternativeDict setValue:[NSNumber numberWithFloat:result.confidence]forKey:@"confidence"];
+    NSArray * alternatives = @[alternativeDict];
     NSArray * results = @[alternatives];
     [self sendResults:results];
-
 }
 
 -(void) recognition:(ISSpeechRecognition *)speechRecognition didFailWithError:(NSError *)error
@@ -179,6 +216,7 @@
     [event setValue:@"result" forKey:@"type"];
     [event setValue:nil forKey:@"emma"];
     [event setValue:nil forKey:@"interpretation"];
+    [event setValue:[NSNumber numberWithInt:0] forKey:@"resultIndex"];
     [event setValue:results forKey:@"results"];
 
     self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
@@ -197,6 +235,15 @@
     [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
 }
 
+-(void) sendEvent:(NSString *) eventType
+{
+    NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
+    [event setValue:eventType forKey:@"type"];
+    self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
+    [self.pluginResult setKeepCallbackAsBool:YES];
+    [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+}
+
 -(void) stop:(CDVInvokedUrlCommand*)command
 {
     [self stopOrAbort];
@@ -209,44 +256,44 @@
 
 -(void) stopOrAbort
 {
-    @try {
-        if (NSClassFromString(@"SFSpeechRecognizer")) {
-            if (self.audioEngine.isRunning) {
-                NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-                [event setValue:@"end" forKey:@"type"];
-                self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
-                [self.pluginResult setKeepCallbackAsBool:YES];
-                [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
+  if (NSClassFromString(@"SFSpeechRecognizer")) {
+      if (self.audioEngine.isRunning) {
+          [self.audioEngine stop];
+          [self sendEvent:(NSString *)@"audioend"];
 
-                [self.audioEngine stop];
-                [self.recognitionRequest endAudio];
-            }
-        } else {
-            [self.iSpeechRecognition cancel];
-        }
-    }
-    @catch (NSException *exception) {
-        [self sendErrorWithMessage:exception.reason andCode:124];
-    }    
+          [self.recognitionRequest endAudio];
+      }
+  } else if(self.iSpeechRecognition) {
+      [self.iSpeechRecognition cancel];
+  } else {
+      [self sendErrorWithMessage:@"No speech recognizer service available." andCode:4];
+  }
+  @catch (NSException *exception) {
+      [self sendErrorWithMessage:exception.reason andCode:124];
+  }
 }
 
 -(void) stopAndRelease
 {
-    @try {
-        NSMutableDictionary * event = [[NSMutableDictionary alloc]init];
-        [event setValue:@"end" forKey:@"type"];
-        self.pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:event];
-        [self.pluginResult setKeepCallbackAsBool:YES];
-        [self.commandDelegate sendPluginResult:self.pluginResult callbackId:self.command.callbackId];
-
+    if (self.audioEngine.isRunning) {
         [self.audioEngine stop];
-        [self.audioEngine.inputNode removeTapOnBus:0];
-        self.recognitionRequest = nil;
-        self.recognitionTask = nil;
+        [self sendEvent:(NSString *)@"audioend"];
     }
-    @catch (NSException *exception) {
-        [self sendErrorWithMessage:exception.reason andCode:125];
+    [self.audioEngine.inputNode removeTapOnBus:0];
+
+    [self.recognitionRequest endAudio];
+    self.recognitionRequest = nil;
+
+    if(self.recognitionTask.state != SFSpeechRecognitionTaskStateCompleted) {
+        [self.recognitionTask cancel];
     }
+    self.recognitionTask = nil;
+
+    if(self.audioSession) {
+        [self.audioSession setActive:NO withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation error:nil];
+    }
+
+    [self sendEvent:(NSString *)@"end"];
 }
 
 @end
