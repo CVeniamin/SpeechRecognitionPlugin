@@ -52,14 +52,19 @@ public class SpeechRecognition extends CordovaPlugin {
 
     private void promptForMic()
     {
-        if(PermissionHelper.hasPermission(this, permissions[RECORD_AUDIO])) {
-            this.startRecognition();
+        PackageManager pm = cordova.getActivity().getApplicationContext().getPackageManager();
+        if (pm.hasSystemFeature(PackageManager.FEATURE_MICROPHONE)){
+            if(PermissionHelper.hasPermission(this, permissions[RECORD_AUDIO])) {
+                this.startRecognition();
+            }
+            else
+            {
+                getMicPermission();
+            }
+        } else {
+            fireErrorEvent(2, "Device does not have a microphone hence impossible to capture audio.");
+            fireEvent("end");
         }
-        else
-        {
-            getMicPermission();
-        }
-
     }
 
     public void onRequestPermissionResult(int requestCode, String[] permissions,
